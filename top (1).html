@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vidyut - Smart Digital Notebook</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;}
+body{min-height:100vh;display:flex;justify-content:center;align-items:center;background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#333;padding:20px;}
+#container{background:white;border-radius:15px;box-shadow:0 10px 25px rgba(0,0,0,0.2);width:100%;max-width:900px;padding:30px;}
+#loginForm{max-width:350px;margin:0 auto;text-align:center;}
+#loginForm h2{margin-bottom:20px;font-size:2rem;color:#4a90e2;}
+#loginForm input{width:100%;padding:10px;margin-bottom:15px;border:1px solid #ccc;border-radius:7px;font-size:1rem;}
+#loginForm button{width:100%;padding:10px;background:#7b2ff7;color:white;border:none;border-radius:7px;font-size:1rem;cursor:pointer;transition:0.3s;}
+#loginForm button:hover{background:#f107a3;}
+#errorMsg{color:red;font-size:0.9rem;margin-top:10px;height:1.2rem;}
+#home{display:none;text-align:center;}
+#home h1{font-size:2.5rem;margin-bottom:15px;color:white;text-shadow:1px 1px 5px rgba(0,0,0,0.3);}
+#home p{margin-bottom:20px;color:white;font-size:1.2rem;}
+#home button{padding:12px 25px;margin:10px;font-size:1rem;border:none;border-radius:7px;cursor:pointer;color:white;background:#7b2ff7;transition:0.3s;}
+#home button:hover{background:#f107a3;}
+#dashboard{display:none;}
+header{background:linear-gradient(135deg,#7b2ff7,#f107a3);color:white;padding:20px;text-align:center;border-radius:15px 15px 0 0;margin-bottom:20px;position:relative;}
+header h1{font-size:2.5rem;margin-bottom:5px;text-shadow:1px 1px 5px rgba(0,0,0,0.3);}
+nav{display:flex;justify-content:center;gap:15px;padding:15px;background-color:#f3f3f3;flex-wrap:wrap;border-radius:0 0 15px 15px;margin-bottom:20px;}
+nav button{padding:10px 20px;background:#7b2ff7;color:white;border:none;border-radius:7px;cursor:pointer;font-weight:bold;transition:0.3s;}
+nav button:hover{background:#f107a3;}
+main{padding:0 20px 20px 20px;min-height:250px;}
+section.content-section{display:none;background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.1);padding:20px;min-height:200px;}
+section.content-section.active{display:block;}
+#notesList li,#plannerList li,#subjectList li{background:#f0f4f8;padding:10px 12px;margin-bottom:8px;border-radius:5px;display:flex;justify-content:space-between;align-items:center;}
+.note-info{flex:1;}
+.note-actions button{margin-left:5px;padding:5px 10px;border:none;border-radius:5px;cursor:pointer;color:white;}
+.editBtn{background:#4a90e2;}
+.editBtn:hover{background:#3a78c2;}
+.deleteBtn{background:#e74c3c;}
+.deleteBtn:hover{background:#c0392b;}
+textarea,input[type="text"]{width:100%;padding:10px;border-radius:5px;border:1px solid #ccc;margin-bottom:10px;font-size:1rem;}
+#logoutBtn{position:absolute;top:20px;right:20px;background:#e74c3c;border:none;color:white;padding:8px 15px;border-radius:7px;cursor:pointer;font-weight:bold;transition:0.3s;}
+#logoutBtn:hover{background:#c0392b;}
+#drawToolbar{margin-bottom:10px;}
+canvas{border:1px solid #ccc;border-radius:7px;}
+@media(max-width:600px){nav{flex-direction:column;align-items:center;}nav button{width:100%;max-width:300px;}#logoutBtn{position:static;display:block;width:100px;margin:10px auto 30px;}}
+</style>
+</head>
+<body>
+<div id="container">
+
+<!-- Login Form -->
+<div id="loginForm">
+<h2>Login to Vidyut</h2>
+<input type="text" id="username" placeholder="Username" autocomplete="off"/>
+<input type="password" id="password" placeholder="Password" autocomplete="off"/>
+<button onclick="login()">Login</button>
+<div id="errorMsg"></div>
+</div>
+
+<!-- Home -->
+<div id="home">
+<h1>Welcome to Vidyut ⚡</h1>
+<p>Your Smart Digital Notebook</p>
+<button onclick="goDashboard()">📝 Go to Dashboard</button>
+<button onclick="logout()">🚪 Logout</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard">
+<header>
+<h1>⚡ Vidyut</h1>
+<p>Your Smart Digital Notebook</p>
+<button id="logoutBtn">🚪 Logout</button>
+</header>
+<nav>
+<button data-section="newNote">+ New Note</button>
+<button data-section="handNotes">✍ Handwritten Notes</button>
+<button data-section="myNotes">📓 My Notes</button>
+<button data-section="subjects">📚 Subjects</button>
+<button data-section="planner">📅 Planner</button>
+</nav>
+<main>
+
+<!-- New Note -->
+<section id="newNote" class="content-section active">
+<h2>📝 New Note</h2>
+<input type="text" id="noteTitle" placeholder="Note Title"/>
+<input type="text" id="noteFolder" placeholder="Folder Name"/>
+<textarea id="newNoteText" rows="6" placeholder="Type your note here..."></textarea>
+<button onclick="saveNote()">Save Note</button>
+<p id="saveMsg" style="color:green;margin-top:8px;"></p>
+</section>
+
+<!-- Handwritten Notes -->
+<section id="handNotes" class="content-section">
+<h2>✍ Handwritten Notes</h2>
+<input type="text" id="drawTitle" placeholder="Drawing Title"/>
+<div id="drawToolbar">
+<label>Color: <input type="color" id="penColor" value="#000000"></label>
+<label>Thickness: <input type="range" id="penThickness" min="1" max="20" value="3"></label>
+<label>Eraser Size: <input type="range" id="eraserThickness" min="5" max="40" value="15"></label>
+<button id="penBtn">✏ Pen</button>
+<button id="eraserBtn">🩹 Eraser</button>
+<button id="undoBtn">↩ Undo</button>
+<button id="redoBtn">↪ Redo</button>
+<button id="clearBtn">🧹 Clear</button>
+<button id="saveDrawing">💾 Save Drawing</button>
+<button id="addPageBtn">➕ Add Page</button>
+<button id="insertImage">🖼 Insert Image</button>
+</div>
+<div id="canvasContainer">
+<div class="canvas-page"><canvas width="800" height="400"></canvas></div>
+</div>
+</section>
+
+<!-- My Notes -->
+<section id="myNotes" class="content-section">
+<h2>📓 My Notes</h2>
+<ul id="notesList"></ul>
+</section>
+
+<!-- Subjects -->
+<section id="subjects" class="content-section">
+<h2>📚 Subjects</h2>
+<ul id="subjectList"></ul>
+</section>
+
+<!-- Planner -->
+<section id="planner" class="content-section">
+<h2>📅 Planner</h2>
+<input type="text" id="plannerTitle" placeholder="Plan Title"/>
+<textarea id="plannerText" rows="4" placeholder="Write your plan..."></textarea>
+<button onclick="savePlan()">Save Plan</button>
+<ul id="plannerList"></ul>
+</section>
+
+</main>
+</div>
+</div>
+
+<script>
+// CREDENTIALS & PAGE CONTROL
+const validUsername="User";
+const validPassword="Krishna";
+const loginForm=document.getElementById("loginForm");
+const dashboard=document.getElementById("dashboard");
+const home=document.getElementById("home");
+const errorMsg=document.getElementById("errorMsg");
+const logoutBtn=document.getElementById("logoutBtn");
+const sections=document.querySelectorAll("section.content-section");
+if(localStorage.getItem("isLoggedIn")==="true"){showHome();}else{showLogin();}
+function login(){
+    const username=document.getElementById("username").value.trim();
+    const password=document.getElementById("password").value.trim();
+    if(username===""||password===""){errorMsg.textContent="Please enter username and password.";return;}
+    if(username===validUsername && password===validPassword){localStorage.setItem("isLoggedIn","true");showHome();}
+    else{errorMsg.textContent="❌ Invalid username or password";}
+}
+function logout(){localStorage.removeItem("isLoggedIn");showLogin();}
+function showLogin(){dashboard.style.display="none";home.style.display="none";loginForm.style.display="block";errorMsg.textContent="";}
+function showHome(){loginForm.style.display="none";dashboard.style.display="none";home.style.display="block";}
+function goDashboard(){home.style.display="none";dashboard.style.display="block";showSection("newNote");loadNotes();loadSubjects();loadPlanner();}
+function showSection(id){sections.forEach(sec=>{sec.id===id?sec.classList.add("active"):sec.classList.remove("active");});}
+document.querySelectorAll("nav button").forEach(button=>{button.addEventListener("click",()=>{const sectionId=button.getAttribute("data-section");showSection(sectionId);if(sectionId==="myNotes") loadNotes();if(sectionId==="subjects") loadSubjects();if(sectionId==="planner") loadPlanner();});});
+logoutBtn.addEventListener("click",logout);
+
+// TEXT NOTES
+function saveNote(){
+    const title=document.getElementById("noteTitle").value.trim();
+    const folder=document.getElementById("noteFolder").value.trim();
+    const text=document.getElementById("newNoteText").value.trim();
+    const saveMsg=document.getElementById("saveMsg");
+    if(title===""||folder===""||text===""){saveMsg.style.color="red";saveMsg.textContent="All fields required!";return;}
+    const now=new Date();
+    const note={title,folder,text,date:now.toLocaleDateString(),time:now.toLocaleTimeString()};
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    notes.push(note);
+    localStorage.setItem("notes",JSON.stringify(notes));
+    saveMsg.style.color="green";saveMsg.textContent="Note saved!";
+    document.getElementById("noteTitle").value="";
+    document.getElementById("noteFolder").value="";
+    document.getElementById("newNoteText").value="";
+    loadNotes();loadSubjects();
+}
+function loadNotes(){
+    const notesList=document.getElementById("notesList");
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    notesList.innerHTML="";
+    if(notes.length===0){notesList.innerHTML="<li>No notes saved yet.</li>";return;}
+    notes.forEach((note,index)=>{
+        const li=document.createElement("li");
+        li.innerHTML=`<div class="note-info"><strong>${note.title}</strong> [${note.folder}]<br>${note.text.startsWith("data:image")?"<img src='"+note.text+"' width='150'>":note.text}<br><small>${note.date} ${note.time}</small></div>
+        <div class="note-actions">
+        <button class="editBtn" onclick="editNote(${index})">Edit</button>
+        <button class="deleteBtn" onclick="deleteNote(${index})">Delete</button>
+        </div>`;
+        notesList.appendChild(li);
+    });
+}
+function editNote(index){
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    const n=notes[index];
+    if(n.text.startsWith("data:image")){
+        showSection("handNotes");
+        let img = new Image(); img.src=n.text; img.onload=()=>{ctx.drawImage(img,0,0,currentCanvas.width,currentCanvas.height)};
+        document.getElementById("drawTitle").value=n.title;
+    } else{
+        document.getElementById("noteTitle").value=n.title;
+        document.getElementById("noteFolder").value=n.folder;
+        document.getElementById("newNoteText").value=n.text;
+        showSection("newNote");
+    }
+    notes.splice(index,1);
+    localStorage.setItem("notes",JSON.stringify(notes));
+}
+function deleteNote(index){let notes=JSON.parse(localStorage.getItem("notes")||"[]");notes.splice(index,1);localStorage.setItem("notes",JSON.stringify(notes));loadNotes();loadSubjects();}
+
+// SUBJECTS
+function loadSubjects(){
+    const subjectList=document.getElementById("subjectList");
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    let folders=[...new Set(notes.map(n=>n.folder))];
+    subjectList.innerHTML="";
+    if(folders.length===0){subjectList.innerHTML="<li>No folders yet.</li>";return;}
+    folders.forEach(folder=>{
+        const li=document.createElement("li");
+        li.innerHTML = `<strong>${folder}</strong> <button onclick="viewFolder('${folder}')">Open</button>`;
+        subjectList.appendChild(li);
+    });
+}
+function viewFolder(folder){
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    const folderNotes=notes.filter(n=>n.folder===folder);
+    const notesList=document.getElementById("notesList");
+    notesList.innerHTML="";
+    folderNotes.forEach((note,index)=>{
+        const li=document.createElement("li");
+        li.innerHTML=`<div class="note-info"><strong>${note.title}</strong><br>${note.text.startsWith("data:image")?"<img src='"+note.text+"' width='150'>":note.text}<br><small>${note.date} ${note.time}</small></div>
+        <div class="note-actions">
+        <button class="editBtn" onclick="editNoteByFolder(${index},'${folder}')">Edit</button>
+        <button class="deleteBtn" onclick="deleteNoteByFolder(${index},'${folder}')">Delete</button>
+        </div>`;
+        notesList.appendChild(li);
+    });
+    showSection("myNotes");
+}
+function editNoteByFolder(idx,folder){
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    const fNotes=notes.filter(n=>n.folder===folder);
+    const note=fNotes[idx];
+    if(note.text.startsWith("data:image")){
+        showSection("handNotes");
+        let img = new Image(); img.src=note.text; img.onload=()=>{ctx.drawImage(img,0,0,currentCanvas.width,currentCanvas.height)};
+        document.getElementById("drawTitle").value=note.title;
+    } else{
+        document.getElementById("noteTitle").value=note.title;
+        document.getElementById("noteFolder").value=note.folder;
+        document.getElementById("newNoteText").value=note.text;
+        showSection("newNote");
+    }
+    const mainIndex=notes.findIndex(n=>n===note);
+    notes.splice(mainIndex,1);
+    localStorage.setItem("notes",JSON.stringify(notes));
+}
+function deleteNoteByFolder(idx,folder){
+    let notes=JSON.parse(localStorage.getItem("notes")||"[]");
+    const fNotes=notes.filter(n=>n.folder===folder);
+    const note=fNotes[idx];
+    const mainIndex=notes.findIndex(n=>n===note);
+    notes.splice(mainIndex,1);
+    localStorage.setItem("notes",JSON.stringify(notes));
+    loadSubjects();
+    viewFolder(folder);
+}
+
+// PLANNER
+function savePlan(){
+    const title=document.getElementById("plannerTitle").value.trim();
+    const text=document.getElementById("plannerText").value.trim();
+    if(title===""||text===""){alert("All fields required!");return;}
+    const now=new Date();
+    const plan={title,text,date:now.toLocaleDateString(),time:now.toLocaleTimeString()};
+    let plans=JSON.parse(localStorage.getItem("planner")||"[]");
+    plans.push(plan);
+    localStorage.setItem("planner",JSON.stringify(plans));
+    document.getElementById("plannerTitle").value="";
+    document.getElementById("plannerText").value="";
+    loadPlanner();
+}
+function loadPlanner(){
+    const plannerList=document.getElementById("plannerList");
+    let plans=JSON.parse(localStorage.getItem("planner")||"[]");
+    plannerList.innerHTML="";
+    if(plans.length===0){plannerList.innerHTML="<li>No plans yet.</li>";return;}
+    plans.forEach((plan,index)=>{
+        const li=document.createElement("li");
+        li.innerHTML=`<div class="note-info"><strong>${plan.title}</strong><br>${plan.text}<br><small>${plan.date} ${plan.time}</small></div>
+        <div class="note-actions">
+        <button class="editBtn" onclick="editPlan(${index})">Edit</button>
+        <button class="deleteBtn" onclick="deletePlan(${index})">Delete</button>
+        </div>`;
+        plannerList.appendChild(li);
+    });
+}
+function editPlan(index){
+    let plans=JSON.parse(localStorage.getItem("planner")||"[]");
+    const plan=plans[index];
+    document.getElementById("plannerTitle").value=plan.title;
+    document.getElementById("plannerText").value=plan.text;
+    plans.splice(index,1);
+    localStorage.setItem("planner",JSON.stringify(plans));
+    showSection("planner");
+}
+function deletePlan(index){
+    let plans=JSON.parse(localStorage.getItem("planner")||"[]");
+    plans.splice(index,1);
+    localStorage.setItem("planner",JSON.stringify(plans));
+    loadPlanner();
+}
+
+// HANDWRITTEN NOTES
+let canvasContainer = document.getElementById("canvasContainer");
+let currentCanvas = canvasContainer.querySelector("canvas");
+let ctx = currentCanvas.getContext("2d");
+let drawing = false;
+let mode = "pen";
+let undoStack = [], redoStack = [];
+const penColor = document.getElementById("penColor");
+const penThickness = document.getElementById("penThickness");
+const eraserThickness = document.getElementById("eraserThickness");
+let imagesOnCanvas = [];
+
+currentCanvas.addEventListener("mousedown", startDraw);
+currentCanvas.addEventListener("mousemove", draw);
+currentCanvas.addEventListener("mouseup", stopDraw);
+currentCanvas.addEventListener("mouseleave", stopDraw);
+
+function startDraw(e){drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX,e.offsetY);}
+function draw(e){if(!drawing) return; ctx.strokeStyle = mode==="pen"?penColor.value:"#fff"; ctx.lineWidth = mode==="pen"?penThickness.value:eraserThickness.value; ctx.lineCap = "round"; ctx.lineTo(e.offsetX,e.offsetY); ctx.stroke();}
+function stopDraw(){if(drawing){drawing=false; undoStack.push(currentCanvas.toDataURL()); redoStack=[];}}
+
+document.getElementById("penBtn").onclick = ()=>{mode="pen";};
+document.getElementById("eraserBtn").onclick = ()=>{mode="eraser";};
+document.getElementById("clearBtn").onclick = ()=>{
+    ctx.clearRect(0,0,currentCanvas.width,currentCanvas.height);
+    undoStack.push(currentCanvas.toDataURL());
+    redoStack=[];
+    imagesOnCanvas = [];
+};
+document.getElementById("undoBtn").onclick = ()=>{
+    if(undoStack.length>0){
+        redoStack.push(currentCanvas.toDataURL());
+        let imgData = undoStack.pop();
+        let img = new Image();
+        img.src=imgData;
+        img.onload=()=>{ctx.clearRect(0,0,currentCanvas.width,currentCanvas.height); ctx.drawImage(img,0,0);};
+    }
+};
+document.getElementById("redoBtn").onclick = ()=>{
+    if(redoStack.length>0){
+        undoStack.push(currentCanvas.toDataURL());
+        let imgData = redoStack.pop();
+        let img = new Image();
+        img.src=imgData;
+        img.onload=()=>{ctx.clearRect(0,0,currentCanvas.width,currentCanvas.height); ctx.drawImage(img,0,0);};
+    }
+};
+document.getElementById("addPageBtn").onclick = ()=>{
+    let newDiv = document.createElement("div"); newDiv.className="canvas-page"; newDiv.innerHTML=`<canvas width="800" height="400"></canvas>`;
+    canvasContainer.appendChild(newDiv);
+    currentCanvas=newDiv.querySelector("canvas");
+    ctx=currentCanvas.getContext("2d");
+    undoStack=[];redoStack=[]; imagesOnCanvas = [];
+    currentCanvas.addEventListener("mousedown", startDraw);
+    currentCanvas.addEventListener("mousemove", draw);
+    currentCanvas.addEventListener("mouseup", stopDraw);
+    currentCanvas.addEventListener("mouseleave", stopDraw);
+};
+
+// INSERT IMAGE FROM DEVICE
+document.getElementById("insertImage").onclick = ()=>{
+    const input = document.createElement("input");
+    input.type="file";
+    input.accept="image/*";
+    input.onchange = e=>{
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event){
+            let img = new Image();
+            img.src = event.target.result;
+            img.onload = ()=>{
+                ctx.drawImage(img,50,50,img.width/2,img.height/2);
+                imagesOnCanvas.push({img, x:50, y:50, w:img.width/2, h:img.height/2});
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+};
+
+// DELETE IMAGE ON TAP
+currentCanvas.addEventListener("click", e=>{
+    for(let i=imagesOnCanvas.length-1;i>=0;i--){
+        let im = imagesOnCanvas[i];
+        if(e.offsetX >= im.x && e.offsetX <= im.x+im.w && e.offsetY >= im.y && e.offsetY <= im.y+im.h){
+            if(confirm("Delete this image?")){
+                imagesOnCanvas.splice(i,1);
+                redrawCanvas();
+            }
+            break;
+        }
+    }
+});
+
+function redrawCanvas(){
+    ctx.clearRect(0,0,currentCanvas.width,currentCanvas.height);
+    imagesOnCanvas.forEach(im=>{ctx.drawImage(im.img, im.x, im.y, im.w, im.h);});
+}
+
+// SAVE DRAWING
+document.getElementById("saveDrawing").onclick = ()=>{
+    const title = document.getElementById("drawTitle").value.trim();
+    if(title===""){alert("Enter a title!"); return;}
+    let dataURL = currentCanvas.toDataURL();
+    const now = new Date();
+    let notes = JSON.parse(localStorage.getItem("notes")||"[]");
+    notes.push({title,folder:"Handwritten",text:dataURL,date:now.toLocaleDateString(),time:now.toLocaleTimeString()});
+    localStorage.setItem("notes",JSON.stringify(notes));
+    alert("Drawing saved!");
+    document.getElementById("drawTitle").value="";
+    loadNotes();loadSubjects();
+};
+</script>
+</body>
+</html>
